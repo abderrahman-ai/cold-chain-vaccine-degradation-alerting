@@ -1,0 +1,268 @@
+{
+  "name": "—C—o—l—d— —C—h—a—i—n— —&— —V—a—c—c—i—n—e— —D—e—g—r—a—d—a—t—i—o—n— —A—l—e—r—t—i—n—g—",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cold-chain/telemetry",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "node_webhook",
+      "name": "IoT Telemetry Ingest",
+      "position": [
+        256,
+        304
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "2f47b234-ed8a-4c4a-8a0b-c9453dceabb9"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Arrhenius relative rate calculation:\nconst R = 8.314;               // J/(mol*K)\nconst Ea = 85000;              // J/mol (activation energy)\nconst T_ref = 253.15;          // -20°C in Kelvin (storage baseline)\n\nconst items = $input.all();\nreturn items.map(item => {\n  const data = item.json.body ? item.json.body : item.json;\n  const tempK = (data.temperature_c !== undefined ? Number(data.temperature_c) : 0) + 273.15;\n  const intervalMin = data.interval_minutes !== undefined ? Number(data.interval_minutes) : 0;\n  const cumulativeDamage = data.cumulative_damage_index !== undefined ? Number(data.cumulative_damage_index) : 0;\n\n  // Kinetic acceleration factor relative to -20°C\n  const accelFactor = Math.exp((-Ea / R) * ((1 / tempK) - (1 / T_ref)));\n\n  // Incremental thermal budget consumed in hours\n  const deltaDamage = accelFactor * (intervalMin / 60);\n  const updatedDamage = cumulativeDamage + deltaDamage;\n  const isCritical = updatedDamage >= 1.0;\n\n  return {\n    json: {\n      batch_id: data.batch_id || 'UNKNOWN-BATCH',\n      current_temp_c: data.temperature_c,\n      interval_min: intervalMin,\n      incremental_damage: Number(deltaDamage.toFixed(4)),\n      total_damage_index: Number(updatedDamage.toFixed(4)),\n      threshold_limit: 1.0,\n      status: isCritical ? 'CRITICAL_DEGRADATION' : 'NOMINAL',\n      flagged_for_quarantine: isCritical,\n      timestamp: new Date().toISOString()\n    }\n  };\n});"
+      },
+      "id": "node_arrhenius",
+      "name": "Arrhenius Kinetic Engine",
+      "position": [
+        512,
+        304
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-critical-damage",
+              "leftValue": "={{ $json.total_damage_index }}",
+              "operator": {
+                "operation": "gte",
+                "type": "number"
+              },
+              "rightValue": 1
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node_if",
+      "name": "Evaluate Thermal Budget",
+      "position": [
+        752,
+        304
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "parameters": {
+        "chatId": "8019026027",
+        "text": "=🚨 *COLD CHAIN BREACH: BIOMEDICAL QUARANTINE ORDER*\n*Batch ID:* `{{ $json.batch_id }}`\n*Current Temp:* `{{ $json.current_temp_c }}°C`\n*Accumulated Damage Index:* `{{ $json.total_damage_index }} / 1.0`\n*Status:* Critical shelf-life exhaustion.\n*Mandate:* Halt distribution immediately. Route lot to QC for HPLC purity validation.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "node_telegram",
+      "name": "Escalation Alert (Telegram)",
+      "position": [
+        1056,
+        192
+      ],
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "webhookId": "62ce4bc0-ea46-47f9-9bbc-5c7767ce43bd",
+      "credentials": {
+        "telegramApi": {
+          "id": "nfMx7bWC9LVETJCn",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "asgn-status",
+              "name": "status",
+              "type": "string",
+              "value": "LOGGED"
+            },
+            {
+              "id": "asgn-condition",
+              "name": "condition",
+              "type": "string",
+              "value": "NOMINAL"
+            },
+            {
+              "id": "asgn-remaining",
+              "name": "remaining_budget",
+              "type": "number",
+              "value": "={{ Number((1.0 - $json.total_damage_index).toFixed(4)) }}"
+            },
+            {
+              "id": "asgn-batch",
+              "name": "batch_id",
+              "type": "string",
+              "value": "={{ $json.batch_id }}"
+            },
+            {
+              "id": "asgn-damage",
+              "name": "total_damage_index",
+              "type": "number",
+              "value": "={{ $json.total_damage_index }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node_nominal_set",
+      "name": "Format Nominal Response",
+      "position": [
+        1168,
+        400
+      ],
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "asgn-q-status",
+              "name": "status",
+              "type": "string",
+              "value": "QUARANTINE_ORDERED"
+            },
+            {
+              "id": "asgn-q-condition",
+              "name": "condition",
+              "type": "string",
+              "value": "CRITICAL_EXCURSION"
+            },
+            {
+              "id": "asgn-q-batch",
+              "name": "batch_id",
+              "type": "string",
+              "value": "={{ $('Arrhenius Kinetic Engine').item.json.batch_id }}"
+            },
+            {
+              "id": "asgn-q-temp",
+              "name": "current_temp_c",
+              "type": "number",
+              "value": "={{ $('Arrhenius Kinetic Engine').item.json.current_temp_c }}"
+            },
+            {
+              "id": "asgn-q-damage",
+              "name": "total_damage_index",
+              "type": "number",
+              "value": "={{ $('Arrhenius Kinetic Engine').item.json.total_damage_index }}"
+            },
+            {
+              "id": "asgn-q-quarantine",
+              "name": "flagged_for_quarantine",
+              "type": "boolean",
+              "value": true
+            },
+            {
+              "id": "asgn-q-mandate",
+              "name": "mandate",
+              "type": "string",
+              "value": "Halt distribution immediately. Route lot to QC for HPLC purity validation."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node_quarantine_set",
+      "name": "Quarantine Order Confirmation",
+      "position": [
+        1312,
+        192
+      ],
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4
+    }
+  ],
+  "connections": {
+    "Arrhenius Kinetic Engine": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Evaluate Thermal Budget",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Escalation Alert (Telegram)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Quarantine Order Confirmation",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Evaluate Thermal Budget": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Escalation Alert (Telegram)",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Format Nominal Response",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "IoT Telemetry Ingest": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Arrhenius Kinetic Engine",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Quarantine Order Confirmation": {
+      "main": [
+        []
+      ]
+    },
+    "Format Nominal Response": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "tags": []
+}
