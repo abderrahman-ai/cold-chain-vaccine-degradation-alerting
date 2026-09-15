@@ -3,13 +3,11 @@
 <br/>
 
 ```
-██████╗ ██████╗  ██████╗     ███╗   ██╗██████╗ ███╗   ██╗
-██╔══██╗██╔══██╗██╔════╝     ████╗  ██║██╔══██╗████╗  ██║
-██████╔╝██████╔╝██║  ███╗    ██╔██╗ ██║██████╔╝██╔██╗ ██║
-██╔══██╗██╔═══╝ ██║   ██║    ██║╚██╗██║██╔═══╝ ██║╚██╗██║
-██║  ██║██║     ╚██████╔╝    ██║ ╚████║██║     ██║ ╚████║
-╚═╝  ╚═╝╚═╝      ╚═════╝     ╚═╝  ╚═══╝╚═╝     ╚═╝  ╚═══╝
-                         COLD CHAIN
+   __________  __    ____     ________  _____    _____   __
+  / ____/ __ \/ /   / __ \   / ____/ / / /   |  /  _/ | / /
+ / /   / / / / /   / / / /  / /   / /_/ / /| |  / //  |/ / 
+/ /___/ /_/ / /___/ /_/ /  / /___/ __  / ___ |_/ // /|  /  
+\____/\____/_____/_____/   \____/_/ /_/_/  |_/___/_/ |_/
 ```
 
 <h3>Cold Chain & Vaccine Degradation Alerting Engine</h3>
@@ -225,7 +223,7 @@ git clone https://github.com/abderrahman-ai/cold-chain-vaccine-degradation-alert
 git checkout -b feat/new-capability
 
 # 3. Commit your changes
-git commit -m "feat: enhance node error handling"
+git commit -m "style: update unique custom ASCII art banner"
 
 # 4. Push and open a Pull Request
 git push origin feat/new-capability
